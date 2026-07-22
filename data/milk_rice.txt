@@ -1,0 +1,22 @@
+Sri Lankan Milk Rice (Kiribath)
+
+Description: Rice cooked in thick coconut milk until creamy, then set into a firm block and cut into diamond shapes. Traditionally eaten on special occasions and New Year's Day, often with seeni sambol or a katta sambol.
+
+Ingredients (serves 4):
+- 1 cup rice (short grain, if available)
+- 1.5 cups water
+- 1 cup thick coconut milk
+- 1/2 tsp salt
+
+Steps:
+1. Cook rice with water until mostly absorbed and rice is soft.
+2. Reduce heat, stir in coconut milk and salt.
+3. Continue cooking on low heat, stirring frequently, until the mixture thickens into a creamy, sticky consistency.
+4. Transfer to a flat dish, spread evenly, and let cool and set for at least 30 minutes.
+5. Cut into diamond shapes before serving.
+
+Spice level adjustment notes:
+- Milk rice itself is unspiced; heat comes from accompaniments such as seeni sambol (see seeni_sambol.txt) or a chili-based lunu miris paste served on the side.
+
+Approximate nutrition (per serving, plain):
+Calories: 300 kcal | Protein: 5g | Fat: 12g | Carbohydrates: 44g | Sodium: 210mg
