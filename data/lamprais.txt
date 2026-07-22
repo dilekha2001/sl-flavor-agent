@@ -1,0 +1,25 @@
+Sri Lankan Lamprais
+
+Description: A Dutch Burgher-influenced dish of rice cooked in meat stock, served with a meat curry, seeni sambol, brinjal moju, and a frikkadel (meatball), all wrapped and baked in a banana leaf.
+
+Ingredients (serves 4):
+- 2 cups rice
+- 500 ml meat stock (from the curry below)
+- 1 portion mixed meat curry (chicken/beef, similar spicing to chicken_curry.txt)
+- 1 portion seeni sambol (see seeni_sambol.txt)
+- 1 portion brinjal moju (see brinjal_moju.txt)
+- 4 frikkadels (spiced meatballs), pan-fried
+- Banana leaves for wrapping
+
+Steps:
+1. Cook rice in the reserved meat stock instead of plain water, so the rice absorbs the curry flavor.
+2. Soften banana leaves briefly over a flame to make them pliable.
+3. Place a portion of rice on each banana leaf, top with a spoon of meat curry, seeni sambol, brinjal moju, and a frikkadel.
+4. Fold the banana leaf into a parcel and secure with a toothpick or string.
+5. Bake the parcels in the oven at 180°C for 20-25 minutes so the flavors meld together.
+
+Spice level adjustment notes:
+- Spice level is controlled by the meat curry and sambol components used inside; follow the adjustment notes in chicken_curry.txt and seeni_sambol.txt for each layer.
+
+Approximate nutrition (per serving, medium spice level):
+Calories: 650 kcal | Protein: 30g | Fat: 28g | Carbohydrates: 68g | Sodium: 780mg
