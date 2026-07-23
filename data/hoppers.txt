@@ -1,0 +1,25 @@
+Sri Lankan Hoppers (Appa)
+
+Description: Bowl-shaped fermented rice-flour and coconut milk pancakes, crispy at the edges and soft in the center. Often eaten for breakfast or dinner, sometimes with an egg cracked into the center (egg hoppers).
+
+Ingredients (makes about 10):
+- 2 cups rice flour
+- 1 cup coconut milk
+- 1/2 tsp yeast
+- 1 tsp sugar
+- 1 cup warm water
+- Salt to taste
+- Eggs (optional, one per hopper)
+
+Steps:
+1. Dissolve yeast and sugar in warm water, let sit for 10 minutes until foamy.
+2. Mix rice flour, coconut milk, yeast mixture, and salt into a smooth batter. Let ferment for 3-4 hours or overnight.
+3. Heat a small hopper pan (appachatti), swirl a ladle of batter around the sides to form a thin edge and pool in the center.
+4. Cover with a lid and cook for 2-3 minutes until edges turn golden and crisp.
+5. For egg hoppers, crack an egg into the center before covering.
+
+Spice level adjustment notes:
+- Hoppers themselves are not spiced; spice level is controlled by the accompanying sambol (see pol_sambol.txt) served alongside.
+
+Approximate nutrition (per hopper, plain, without egg):
+Calories: 130 kcal | Protein: 2g | Fat: 4g | Carbohydrates: 22g | Sodium: 90mg
