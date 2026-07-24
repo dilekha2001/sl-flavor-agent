@@ -176,6 +176,19 @@ If exact figures aren't present, give the closest approximate values found in th
         return f"Sorry, couldn't fetch nutrition info: {e}"
 
 
+def router_agent(message, vectorstore, groq_client, openrouter_client):
+    intent = message["intent"]
+    dish = message["dish"]
+
+    if intent == "recipe":
+        adjustment_level = message["adjustment_level"]
+        is_sweet = message["is_sweet"]
+        return recipe_agent(dish, adjustment_level, vectorstore, openrouter_client, RECIPE_MODEL, is_sweet=is_sweet)
+    elif intent == "nutrition":
+        return nutrition_agent(dish, vectorstore, groq_client, NUTRITION_MODEL)
+    else:
+        return "Sorry, I didn't understand that request."
+
 def get_signature_dish(available_dishes):
     day_index = datetime.date.today().toordinal() % len(available_dishes)
     return available_dishes[day_index]
@@ -268,17 +281,15 @@ if st.session_state.selected_dish:
         get_nutrition_clicked = st.button("Get Nutrition Info", key="get_nutrition_btn", use_container_width=True)
 
     if get_recipe_clicked:
+        message = {"intent": "recipe", "dish": dish, "adjustment_level": adjustment_level, "is_sweet": is_sweet}
         with st.spinner(f"Preparing your {dish} recipe..."):
-            recipe_result = recipe_agent(
-                dish, adjustment_level, vectorstore, openrouter_client, RECIPE_MODEL, is_sweet=is_sweet
-            )
+            recipe_result = router_agent(message, vectorstore, groq_client, openrouter_client)
             st.markdown(f'<div class="result-box">{recipe_result}</div>', unsafe_allow_html=True)
 
     if get_nutrition_clicked:
+        message = {"intent": "nutrition", "dish": dish}
         with st.spinner(f"Calculating nutrition for {dish}..."):
-            nutrition_result = nutrition_agent(
-                dish, vectorstore, groq_client, NUTRITION_MODEL
-            )
+            nutrition_result = router_agent(message, vectorstore, groq_client, openrouter_client)
             st.markdown(f'<div class="result-box">{nutrition_result}</div>', unsafe_allow_html=True)
 else:
     st.info("👆 Select a dish above (either today's signature dish or from the browse list) to get started.")
