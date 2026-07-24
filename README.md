@@ -51,7 +51,7 @@ Ran 5 test queries directly against the vector store (`k=2`) to check retrieval 
 | dessert | watalappan.txt, curd_and_treacle.txt | ✅ Yes |
 | mild curry | potato_curry.txt, pumpkin_curry.txt | ✅ Yes |
 
-3 out of 5 were clean hits. The one clear failure ("vegetarian dish") happened because nothing in the corpus is tagged by diet — the retriever just matches on generic curry text. Adding a `diet` metadata field would fix this.
+3 out of 5 were clean hits. The one clear failure ("vegetarian dish") happened because nothing in the corpus is tagged by diet, the retriever just matches on generic curry text. Adding a `diet` metadata field would fix this.
 
 ## Models used
 
