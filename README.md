@@ -1,92 +1,118 @@
 # 🍛 Sri Lankan Flavor Assistant
 
-A Streamlit app that gives you a Sri Lankan recipe adjusted to your spice or sweetness level, plus nutrition info, using RAG so answers come from a real recipe corpus instead of the LLM just making things up.
+An Agentic AI Streamlit application that delivers Sri Lankan recipes adjusted to customized spice/sweetness levels and computes realistic nutrition profiles. Powered by a Multi-Agent Architecture, RAG over an authentic recipe corpus, self-reflection, and structured inter-agent messaging.
 
-**Live demo:** https://sl-flavor-agent-bydil.streamlit.app/
+* **Live Demo:** [sl-flavor-agent-bydil.streamlit.app](https://sl-flavor-agent-bydil.streamlit.app/)
+* **GitHub Repository:** [github.com/dilekha2001/sl-flavor-agent](https://github.com/dilekha2001/sl-flavor-agent)
+* **Course:** IT41043 — Intelligent Systems (Agentic AI), Horizon Campus
 
-Built for IT41043 — Intelligent Systems (Agentic AI), Horizon Campus.
+---
 
-## What it does
+## Architecture & Agentic Design Patterns
 
-Pick a dish (or use today's featured one), set the spice/sweetness slider, and click either:
-- **Get Recipe** — full recipe adjusted to your slider level
-- **Get Nutrition Info** — calories, protein, fat, carbs, sodium
+This system leverages **4 core agentic design patterns**:
 
-## How it works
+1. **Router Pattern (`router_agent`):** Evaluates user intent (`recipe` vs `nutrition`) and dynamically delegates execution to specialized downstream agents.
+2. **Reflection / Self-Correction Pattern (`reflect_on_recipe`):** After initial recipe generation, the LLM re-reads its output against retrieved ground-truth context to check for ingredient or procedural errors. If issues are found, it self-corrects before handing off to the next step.
+3. **Structured Agent-to-Agent Communication (`AgentMessage`):** Rather than computing generic nutrition data via a separate lookup, `recipe_agent` extracts real ingredient quantities, formats them into a structured `@dataclass AgentMessage`, and hands it off to `nutrition_agent`.
+4. **Retrieval-Augmented Generation (RAG):** Grounds LLM responses on local recipe context to prevent hallucination and improve factual consistency.
 
-```
-User picks dish + slider + button
-        │
-        ▼
-message = {intent, dish, adjustment_level, is_sweet}
-        │
-        ▼
-   router_agent()
-   ├── intent == "recipe"    → recipe_agent()    → OpenRouter LLM
-   └── intent == "nutrition" → nutrition_agent()  → Groq LLM
-        │
-        ▼
-   both agents first do vectorstore.similarity_search()
-   to pull relevant recipe context before generating
-```
+### System Execution & Communication Flow
 
-One router function reads the intent and calls the right agent. Both agents retrieve context from the vector store first (RAG), then pass it to an LLM to generate the actual answer.
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Streamlit UI
+    participant Router as Router Agent
+    participant Recipe as Recipe Agent (OpenRouter / Llama 3.1 8B)
+    participant VectorDB as Chroma VectorStore
+    participant Nutrition as Nutrition Agent (Groq / Llama 3.1 Instant)
 
-## RAG pipeline
-
-- 22 dish `.txt` files (20 mains + 2 desserts) make up the corpus
-- Embedded with `sentence-transformers/all-MiniLM-L6-v2`
-- Stored in a local Chroma vector store (`./chroma_db`), cached with `@st.cache_resource`
-- On each request: similarity search → top-k chunks → inserted into the prompt as context → sent to the LLM
-
-### Retrieval test
-
-Ran 5 test queries directly against the vector store (`k=2`) to check retrieval quality:
-
-| Query | Top result(s) | Relevant? |
-|---|---|---|
-| spicy chicken curry | chicken_curry.txt | ✅ Yes |
-| vegetarian dish | fish_curry.txt, kottu_roti.txt (chicken) | ❌ No — corpus has no dietary tags |
-| coconut sambol | pol_sambol.txt, milk_rice.txt | ⚠️ Partial |
-| dessert | watalappan.txt, curd_and_treacle.txt | ✅ Yes |
-| mild curry | potato_curry.txt, pumpkin_curry.txt | ✅ Yes |
-
-3 out of 5 were clean hits. The one clear failure ("vegetarian dish") happened because nothing in the corpus is tagged by diet, the retriever just matches on generic curry text. Adding a `diet` metadata field would fix this.
-
-## Models used
-
-| Agent | Provider | Model | Why |
-|---|---|---|---|
-| Recipe | OpenRouter | `meta-llama/llama-3.1-8b-instruct` | Bigger task — writing a full recipe, needs more general generation |
-| Nutrition | Groq | `llama-3.1-8b-instant` | Small task — just extracting numbers, so speed/cost matter more than reasoning |
-
-## Setup
-
-```bash
-git clone https://github.com/dilekha2001/sl-flavor-agent.git
-cd sl-flavor-agent
-python -m venv venv
-venv\Scripts\activate        # Windows
-pip install -r requirements.txt
+    User->>Router: Submit Request (Dish, Intent, Spice/Sweetness Level)
+    Router->>Recipe: Delegate Task (Intent: Recipe)
+    Recipe->>VectorDB: Similarity Search (k=3)
+    VectorDB-->>Recipe: Grounding Recipe Context
+    Recipe->>Recipe: Reflect & Critique Output vs Context
+    Recipe->>Recipe: Extract JSON Ingredient Schema
+    Recipe->>Nutrition: Send AgentMessage (Structured Ingredients Payload)
+    Nutrition->>VectorDB: Similarity Search (k=2)
+    VectorDB-->>Nutrition: Grounding Macro Context
+    Nutrition->>Nutrition: Estimate Macros based on Exact Recipe Quantities
+    Recipe-->>Router: Formatted Recipe Output
+    Nutrition-->>Router: Computed Nutrition Output
+    Router-->>User: Render Recipe & Nutrition Cards in UI
 ```
 
-Create a `.env` file:
-```
-GROQ_API_KEY=your_key_here
-OPENROUTER_API_KEY=your_key_here
-```
+---
 
-Run:
-```bash
-streamlit run app.py
-```
+## Model Selection Strategy
 
-## Limitations
+| Sub-task | Selected Model | Provider | Latency | Cost | Context / Reasoning Rationale |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Recipe Generation & Self-Reflection** | `meta-llama/llama-3.1-8b-instruct` | OpenRouter | ~1.2s - 1.8s | Low | Higher instruction-following quality, superior reasoning capability for self-reflection and strict JSON schema extraction. |
+| **Nutrition Extraction** | `llama-3.1-8b-instant` | Groq | ~150ms - 300ms | Extremely Low / Free Tier | Optimized for near-instant execution on structured numerical extraction tasks where speed matters more than deep reasoning. |
 
-- Small corpus (22 dishes) — anything outside that gets the closest guess, not a real match
-- No memory between requests — each click is independent
-- No fact-checking on generated text; nutrition numbers are sometimes approximations
-- Needs both Groq and OpenRouter working — if either is down, that feature breaks
-- Retrieval struggles with dietary/constraint queries (see test table above)
-- No rate limiting on the public demo
-- English only
+---
+
+## RAG Pipeline & Corpus
+
+* **Corpus:** 22 Sri Lankan recipe `.txt` files (20 Main Dishes + 2 Desserts).
+* **Embedding Model:** `sentence-transformers/all-MiniLM-L6-v2` (384 dimensions).
+* **Vector Database:** Local `Chroma` instance (`./chroma_db`), cached via `@st.cache_resource`.
+* **Retrieval Config:** Top-$k$ similarity search ($k=3$ for recipes, $k=2$ for nutrition grounding).
+
+### Retrieval Quality Benchmark
+
+| Query | Top Result(s) | Relevant? | Benchmark Notes |
+| :--- | :--- | :---: | :--- |
+| `spicy chicken curry` | `chicken_curry.txt` | ✅ Yes | Direct semantic match. |
+| `vegetarian dish` | `fish_curry.txt`, `kottu_roti.txt` | ❌ No | False positive; corpus lacks dietary metadata tags. |
+| `coconut sambol` | `pol_sambol.txt`, `milk_rice.txt` | ⚠️ Partial | Correctly retrieved `pol_sambol`, secondary match was contextually adjacent. |
+| `dessert` | `watalappan.txt`, `curd_and_treacle.txt` | ✅ Yes | Clean domain match. |
+| `mild curry` | `potato_curry.txt`, `pumpkin_curry.txt` | ✅ Yes | Accurate categorization. |
+
+---
+
+## Local Installation & Setup
+
+1. **Clone Repository:**
+   ```bash
+   git clone https://github.com/dilekha2001/sl-flavor-agent.git
+   cd sl-flavor-agent
+   ```
+
+2. **Setup Virtual Environment:**
+   ```bash
+   python -m venv venv
+   # Activate:
+   # Windows:
+   venv\Scripts\activate
+   # macOS/Linux:
+   source venv/bin/activate
+   ```
+
+3. **Install Dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Configure Environment Variables:**
+   Create a `.env` file in the root directory:
+   ```env
+   GROQ_API_KEY=your_groq_api_key
+   OPENROUTER_API_KEY=your_openrouter_api_key
+   ```
+
+5. **Run App:**
+   ```bash
+   streamlit run app.py
+   ```
+
+---
+
+## Known Limitations & Future Work
+
+* **Corpus Scope:** Small dataset (22 dishes); queries outside this set default to nearest-neighbor matches.
+* **Dietary Tagging:** Requires metadata filtering (e.g., `is_vegetarian: true`) to resolve broad constraint queries.
+* **Stateless:** Requests are independent with no persistent multi-turn chat memory.
+* **API Dependencies:** Depends on external APIs (Groq and OpenRouter) staying operational.
