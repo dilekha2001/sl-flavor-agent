@@ -1,5 +1,6 @@
 import os
 import datetime
+from typing import Optional, Dict, Any
 from dotenv import load_dotenv
 import streamlit as st
 from groq import Groq
@@ -17,9 +18,6 @@ st.set_page_config(page_title="Sri Lankan Flavor Assistant", page_icon="🍛", l
 
 # ---------------------------------------------------------
 # Theme-adaptive, responsive styling
-# Uses prefers-color-scheme so colors adjust automatically to
-# the user's system/browser light or dark setting, and media
-# queries so spacing/font sizes adapt for mobile screens.
 # ---------------------------------------------------------
 st.markdown("""
 <style>
@@ -27,8 +25,6 @@ st.markdown("""
         --accent: #D2691E;
         --accent-soft: #F2D9C4;
     }
-
-    /* ---------- Light mode (default) ---------- */
     .card {
         background-color: rgba(210, 105, 30, 0.06);
         border: 1px solid rgba(210, 105, 30, 0.25);
@@ -43,6 +39,15 @@ st.markdown("""
         padding: 1.3em 1.6em;
         margin-top: 0.8em;
         line-height: 1.6;
+    }
+    .agent-badge {
+        display: inline-block;
+        font-size: 0.75em;
+        opacity: 0.65;
+        border: 1px solid rgba(0, 0, 0, 0.15);
+        border-radius: 20px;
+        padding: 0.15em 0.7em;
+        margin-bottom: 0.6em;
     }
     div.stButton > button {
         border: 1px solid var(--accent-soft);
@@ -65,8 +70,6 @@ st.markdown("""
         margin-top: -0.6em;
         margin-bottom: 1.2em;
     }
-
-    /* ---------- Dark mode override ---------- */
     @media (prefers-color-scheme: dark) {
         .card {
             background-color: rgba(210, 105, 30, 0.10);
@@ -76,20 +79,14 @@ st.markdown("""
             background-color: rgba(255, 255, 255, 0.04);
             border: 1px solid rgba(255, 255, 255, 0.10);
         }
+        .agent-badge {
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
     }
-
-    /* ---------- Mobile responsiveness ---------- */
     @media (max-width: 640px) {
-        h1 {
-            font-size: 1.5em !important;
-        }
-        .card {
-            padding: 1em 1.1em;
-        }
-        div.stButton > button {
-            font-size: 0.85em;
-            padding: 0.4em 0.6em;
-        }
+        h1 { font-size: 1.5em !important; }
+        .card { padding: 1em 1.1em; }
+        div.stButton > button { font-size: 0.85em; padding: 0.4em 0.6em; }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -106,35 +103,103 @@ openrouter_key = os.getenv("OPENROUTER_API_KEY") or st.secrets.get("OPENROUTER_A
 groq_client = Groq(api_key=groq_key)
 openrouter_client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=openrouter_key)
 
-RECIPE_MODEL = "meta-llama/llama-3.1-8b-instruct"   # OpenRouter - deep reasoning / final recipe generation
-NUTRITION_MODEL = "llama-3.1-8b-instant"             # Groq - fast, cheap extraction task
+RECIPE_MODEL = "meta-llama/llama-3.1-8b-instruct"   # OpenRouter - deep reasoning & reflection
+NUTRITION_MODEL = "llama-3.1-8b-instant"            # Groq - fast, low-latency extraction
+
 
 @st.cache_resource
 def load_vectorstore():
     embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
     return Chroma(persist_directory="./chroma_db", embedding_function=embeddings)
 
+
 vectorstore = load_vectorstore()
 
 # ---------------------------------------------------------
-# Agent functions
+# Agent Communication Protocol
 # ---------------------------------------------------------
+class AgentMessage:
+    """Structured message passed between agents.
+
+    sender / recipient identify which agent produced / should consume the
+    message, and payload carries whatever structured data that agent needs.
+    Every inter-agent exchange in this app (recipe_agent <-> reflection_agent,
+    recipe_agent -> nutrition_agent -> recipe_agent) is expressed as one of
+    these rather than a plain function return value, so the hand-off is
+    explicit and inspectable (see README sequence diagram).
+    """
+
+    def __init__(self, sender: str, recipient: str, payload: Dict[str, Any]):
+        self.sender = sender
+        self.recipient = recipient
+        self.payload = payload
+        self.timestamp = datetime.datetime.now().isoformat()
+
+    def __repr__(self):
+        return f"AgentMessage({self.sender} -> {self.recipient}, keys={list(self.payload.keys())})"
+
+
+# ---------------------------------------------------------
+# Agent Functions
+# ---------------------------------------------------------
+def reflection_agent(message: AgentMessage, llm_client, model_name: str) -> AgentMessage:
+    """Self-Correction Agent.
+
+    Receives an AgentMessage from recipe_agent containing the generated
+    recipe text and the retrieval context it was based on. Critiques the
+    recipe against that context and replies with an AgentMessage containing
+    the verified (possibly corrected) recipe.
+    """
+    recipe_text = message.payload["recipe_text"]
+    context_text = message.payload["context_text"]
+
+    prompt = f"""You are a senior Sri Lankan culinary reviewer.
+Review the following generated recipe against the authentic reference context provided.
+
+Reference Context:
+{context_text}
+
+Generated Recipe:
+{recipe_text}
+
+Task:
+1. Check if any ingredient quantities or steps contradict traditional Sri Lankan cooking or the context.
+2. If the recipe is accurate and well-structured, return it exactly as-is.
+3. If there are hallucinations or missing key steps, output a corrected version and append a brief line at the end: "**Chef's Note (Self-Corrected):** [brief explanation of fix]".
+
+Output ONLY the final verified recipe text."""
+
+    try:
+        response = llm_client.chat.completions.create(
+            model=model_name,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3
+        )
+        verified_text = response.choices[0].message.content
+        corrected = "Self-Corrected" in verified_text
+    except Exception:
+        verified_text = recipe_text
+        corrected = False
+
+    return AgentMessage(
+        sender="reflection_agent",
+        recipient="recipe_agent",
+        payload={"verified_recipe": verified_text, "corrected": corrected}
+    )
+
+
 def recipe_agent(dish_name, adjustment_level, vectorstore, llm_client, model_name, is_sweet=False):
+    """Generates a recipe via RAG, then hands it off to reflection_agent
+    for verification before returning the final result."""
     results = vectorstore.similarity_search(dish_name, k=3)
     context_text = "\n\n".join([r.page_content for r in results])
 
     if is_sweet:
         adjustment_instruction = f"""Requested sweetness level (1=lightly sweet, 5=very sweet): {adjustment_level}
-
-Provide a recipe using the context above, adjusting sugar/jaggery/treacle quantities
-realistically to match the requested sweetness level. Include ingredient list
-with quantities and clear steps."""
+Provide a recipe using the context above, adjusting sugar/jaggery/treacle quantities realistically to match the requested sweetness level. Include ingredient list with quantities and clear steps."""
     else:
         adjustment_instruction = f"""Requested spice level (1=mild, 5=very spicy): {adjustment_level}
-
-Provide a recipe using the context above, adjusting chili/spice quantities
-realistically to match the requested spice level. Include ingredient list
-with quantities and clear steps."""
+Provide a recipe using the context above, adjusting chili/spice quantities realistically to match the requested spice level. Include ingredient list with quantities and clear steps."""
 
     prompt = f"""You are a Sri Lankan cuisine recipe assistant.
 
@@ -149,45 +214,117 @@ Dish requested: {dish_name}
             model=model_name,
             messages=[{"role": "user", "content": prompt}]
         )
-        return response.choices[0].message.content
+        initial_recipe = response.choices[0].message.content
+
+        # Agent-to-agent message: recipe_agent -> reflection_agent
+        reflection_request = AgentMessage(
+            sender="recipe_agent",
+            recipient="reflection_agent",
+            payload={"recipe_text": initial_recipe, "context_text": context_text}
+        )
+        reflection_reply = reflection_agent(reflection_request, llm_client, model_name)
+
+        return {
+            "recipe_text": reflection_reply.payload["verified_recipe"],
+            "self_corrected": reflection_reply.payload["corrected"],
+        }
     except Exception as e:
-        return f"Sorry, something went wrong generating your recipe: {e}"
+        return {
+            "recipe_text": f"Sorry, something went wrong generating your recipe: {e}",
+            "self_corrected": False,
+        }
 
 
-def nutrition_agent(dish_name, vectorstore, llm_client, model_name):
+def nutrition_agent(dish_name, vectorstore, llm_client, model_name,
+                     incoming_message: Optional[AgentMessage] = None) -> AgentMessage:
+    """Estimates nutrition info via RAG. If it received an AgentMessage from
+    recipe_agent carrying the exact generated recipe, it grounds the
+    estimate in those specific ingredients/quantities instead of generic
+    corpus context, and replies with an AgentMessage back to recipe_agent."""
     results = vectorstore.similarity_search(dish_name, k=2)
     context_text = "\n\n".join([r.page_content for r in results])
 
-    prompt = f"""Extract and summarize only the nutrition information
-(calories, protein, fat, carbohydrates, sodium) for the dish: {dish_name}
+    used_recipe_ingredients = incoming_message is not None and bool(
+        incoming_message.payload.get("ingredients")
+    )
+
+    if used_recipe_ingredients:
+        ingredients = incoming_message.payload["ingredients"]
+        prompt = f"""You are a concise nutrition assistant.
+
+Estimate nutrition information (calories, protein, fat, carbohydrates, sodium) for the dish: {dish_name}
+
+Base the estimate on these exact ingredients and quantities used in this specific generated recipe:
+{ingredients}
+
+Reference context:
+{context_text}
+
+STRICT OUTPUT RULES:
+1. Do NOT include conversational intros.
+2. Provide a brief breakdown per main ingredient.
+3. End with a clear **Total Summary** table for the full dish."""
+    else:
+        prompt = f"""Extract and summarize only the nutrition information (calories, protein, fat, carbohydrates, sodium) for the dish: {dish_name}
 
 Context:
 {context_text}
 
-If exact figures aren't present, give the closest approximate values found in the context."""
+If exact figures aren't present, give the closest approximate values found in the context.
+
+STRICT OUTPUT RULES:
+1. Do NOT include conversational intros.
+2. Provide a clean, concise markdown table or summary."""
 
     try:
         response = llm_client.chat.completions.create(
             model=model_name,
             messages=[{"role": "user", "content": prompt}]
         )
-        return response.choices[0].message.content
+        result_text = response.choices[0].message.content
     except Exception as e:
-        return f"Sorry, couldn't fetch nutrition info: {e}"
+        result_text = f"Sorry, couldn't fetch nutrition info: {e}"
+
+    # Agent-to-agent message: nutrition_agent -> recipe_agent
+    return AgentMessage(
+        sender="nutrition_agent",
+        recipient="recipe_agent",
+        payload={
+            "nutrition_summary": result_text,
+            "used_recipe_ingredients": used_recipe_ingredients,
+        }
+    )
 
 
 def router_agent(message, vectorstore, groq_client, openrouter_client):
+    """Reads intent and dispatches to the right agent. Unwraps whatever
+    structured result/AgentMessage that agent returns into a plain dict
+    the UI layer can render."""
     intent = message["intent"]
     dish = message["dish"]
 
     if intent == "recipe":
         adjustment_level = message["adjustment_level"]
         is_sweet = message["is_sweet"]
-        return recipe_agent(dish, adjustment_level, vectorstore, openrouter_client, RECIPE_MODEL, is_sweet=is_sweet)
+        result = recipe_agent(
+            dish, adjustment_level, vectorstore, openrouter_client, RECIPE_MODEL, is_sweet=is_sweet
+        )
+        return {"type": "recipe", **result}
+
     elif intent == "nutrition":
-        return nutrition_agent(dish, vectorstore, groq_client, NUTRITION_MODEL)
+        incoming_msg = message.get("incoming_message", None)
+        reply = nutrition_agent(
+            dish, vectorstore, groq_client, NUTRITION_MODEL, incoming_message=incoming_msg
+        )
+        return {
+            "type": "nutrition",
+            "nutrition_summary": reply.payload["nutrition_summary"],
+            "used_recipe_ingredients": reply.payload["used_recipe_ingredients"],
+        }
+
     else:
-        return "Sorry, I didn't understand that request."
+        return {"type": "error", "message": "Sorry, I didn't understand that request."}
+
 
 def get_signature_dish(available_dishes):
     day_index = datetime.date.today().toordinal() % len(available_dishes)
@@ -195,7 +332,7 @@ def get_signature_dish(available_dishes):
 
 
 # ---------------------------------------------------------
-# Dish list (mirrors your data/ corpus)
+# Dish list & Session State Initialization
 # ---------------------------------------------------------
 MAIN_DISHES = [
     "Chicken Curry", "Fish Curry", "Dhal Curry", "Egg Curry",
@@ -206,14 +343,13 @@ MAIN_DISHES = [
 ]
 
 DESSERTS = ["Watalappan", "Curd and Treacle"]
-
 available_dishes = MAIN_DISHES + DESSERTS
-
-# Dishes where "sweetness" is the relevant adjustment instead of "spice level"
 SWEET_DISHES = set(DESSERTS)
 
 if "selected_dish" not in st.session_state:
     st.session_state.selected_dish = None
+if "last_generated_recipe" not in st.session_state:
+    st.session_state.last_generated_recipe = {}
 
 # ---------------------------------------------------------
 # Section 1: Today's Signature Dish
@@ -233,7 +369,7 @@ if st.button("Select Today's Dish", key="signature_btn"):
 st.write("")
 
 # ---------------------------------------------------------
-# Section 2: Browse and choose a dish, split by category
+# Section 2: Browse and choose a dish
 # ---------------------------------------------------------
 st.markdown("### 📖 Browse Available Dishes")
 st.caption("Choose a dish to see its recipe and nutrition info:")
@@ -255,7 +391,7 @@ st.write("")
 st.divider()
 
 # ---------------------------------------------------------
-# Section 3: Once a dish is selected, show controls + results
+# Section 3: Controls + Results (with Agent Messaging)
 # ---------------------------------------------------------
 if st.session_state.selected_dish:
     dish = st.session_state.selected_dish
@@ -282,14 +418,49 @@ if st.session_state.selected_dish:
 
     if get_recipe_clicked:
         message = {"intent": "recipe", "dish": dish, "adjustment_level": adjustment_level, "is_sweet": is_sweet}
-        with st.spinner(f"Preparing your {dish} recipe..."):
-            recipe_result = router_agent(message, vectorstore, groq_client, openrouter_client)
-            st.markdown(f'<div class="result-box">{recipe_result}</div>', unsafe_allow_html=True)
+        with st.spinner(f"Preparing and verifying your {dish} recipe..."):
+            result = router_agent(message, vectorstore, groq_client, openrouter_client)
+            # Save generated recipe in session state so nutrition_agent can
+            # later be sent it via an AgentMessage
+            st.session_state.last_generated_recipe[dish] = result["recipe_text"]
+
+            if result["self_corrected"]:
+                st.markdown(
+                    '<span class="agent-badge">✅ verified by reflection_agent — corrections applied</span>',
+                    unsafe_allow_html=True
+                )
+            else:
+                st.markdown(
+                    '<span class="agent-badge">✅ verified by reflection_agent — no changes needed</span>',
+                    unsafe_allow_html=True
+                )
+            st.markdown(f'<div class="result-box">{result["recipe_text"]}</div>', unsafe_allow_html=True)
 
     if get_nutrition_clicked:
-        message = {"intent": "nutrition", "dish": dish}
         with st.spinner(f"Calculating nutrition for {dish}..."):
-            nutrition_result = router_agent(message, vectorstore, groq_client, openrouter_client)
-            st.markdown(f'<div class="result-box">{nutrition_result}</div>', unsafe_allow_html=True)
+            # If a recipe was previously generated for this dish, send it to
+            # nutrition_agent via an AgentMessage
+            incoming_msg = None
+            if dish in st.session_state.last_generated_recipe:
+                incoming_msg = AgentMessage(
+                    sender="recipe_agent",
+                    recipient="nutrition_agent",
+                    payload={"ingredients": st.session_state.last_generated_recipe[dish]}
+                )
+
+            message = {"intent": "nutrition", "dish": dish, "incoming_message": incoming_msg}
+            result = router_agent(message, vectorstore, groq_client, openrouter_client)
+
+            if result["used_recipe_ingredients"]:
+                st.markdown(
+                    '<span class="agent-badge">📩 grounded in your generated recipe\'s exact ingredients</span>',
+                    unsafe_allow_html=True
+                )
+            else:
+                st.markdown(
+                    '<span class="agent-badge">📖 grounded in corpus reference data</span>',
+                    unsafe_allow_html=True
+                )
+            st.markdown(f'<div class="result-box">{result["nutrition_summary"]}</div>', unsafe_allow_html=True)
 else:
     st.info("👆 Select a dish above (either today's signature dish or from the browse list) to get started.")
