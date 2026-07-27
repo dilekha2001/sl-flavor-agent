@@ -95,8 +95,8 @@ pip install -r requirements.txt
 
 Add a `.env` file:
 ```
-GROQ_API_KEY=your_key
-OPENROUTER_API_KEY=your_key
+GROQ_API_KEY=my_key
+OPENROUTER_API_KEY=my_key
 ```
 
 Run it:
