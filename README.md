@@ -22,6 +22,33 @@ I used three patterns here, not just one dressed up as three:
 
 **Reflection** - after `recipe_agent` writes a first draft, it gets sent over to `reflection_agent`, which checks it against the same context and either leaves it alone or fixes anything that doesn't match up with the source material (and adds a note saying it corrected something).
 
+Here's how it all fits together:
+
+```mermaid
+flowchart TD
+    U[User - Streamlit UI] -->|dish, slider, button click| R(router_agent)
+
+    R -->|intent = recipe| RA(recipe_agent)
+    R -->|intent = nutrition| NA(nutrition_agent)
+
+    RA -->|similarity_search| VS[(Chroma Vectorstore)]
+    NA -->|similarity_search| VS
+
+    RA -->|generated recipe + context| SC(reflection_agent)
+    SC -->|verified / corrected recipe| RA
+
+    NA -->|nutrition summary| R
+    RA -->|final recipe| R
+
+    R --> U
+
+    RA -.->|OpenRouter: Llama-3.1-8B-instruct| M1[Recipe Model]
+    SC -.->|OpenRouter: Llama-3.1-8B-instruct| M1
+    NA -.->|Groq: Llama-3.1-8B-instant| M2[Nutrition Model]
+```
+
+
+
 ## How the agents talk to each other
 
 I didn't use LangGraph or CrewAI for this - just a small custom class called `AgentMessage` (sender, recipient, payload, timestamp) that agents pass between each other instead of just returning plain strings. Honestly this was mostly so I could actually see and trace what was being handed off where, and it made the reflection/nutrition parts feel less like one big function and more like separate things talking to each other.
