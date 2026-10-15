@@ -44,7 +44,7 @@ flowchart TD
 
     RA -.->|OpenRouter: Llama-3.1-8B-instruct| M1[Recipe Model]
     SC -.->|OpenRouter: Llama-3.1-8B-instruct| M1
-    NA -.->|Groq: Llama-3.1-8B-instant| M2[Nutrition Model]
+    NA -.->|Groq: openai/gpt-oss-20b| M2[Nutrition Model]
 ```
 
 
@@ -84,9 +84,9 @@ I used two different models for two different jobs rather than just picking one 
 | Sub-task | Model | Provider | Latency | Cost/token | Context window | Reasoning quality |
 |---|---|---|---|---|---|---|
 | Recipe writing + reflection | Llama-3.1-8B-instruct | OpenRouter | slower (~1-2s) | low but not free | 128K | good enough for writing + critiquing its own output |
-| Nutrition extraction | Llama-3.1-8B-instant | Groq | fast (~150-300ms) | basically free | 128K | fine - it's just pulling numbers from context, not writing anything creative |
+| Nutrition extraction | openai/gpt-oss-20b | Groq | fast (~150-300ms) | basically free | 128K | fine - it's just pulling numbers from context, not writing anything creative |
 
-The reasoning was basically: recipe generation + checking itself is the harder job, so it's worth paying a bit more latency/cost for better instruction following. Nutrition is a much simpler lookup-style task so I didn't see the point in using the slower/pricier model there - Groq is fast enough and free enough that it made no sense not to use it.
+The reasoning was basically: recipe generation + checking itself is the harder job, so it's worth paying a bit more latency/cost for better instruction following. Nutrition is a much simpler lookup-style task so I didn't see the point in using the slower/pricier model there - Groq is fast enough that it made no sense not to use it. I originally used llama-3.1-8b-instant here, but Groq retired it in August 2026, so I switched to gpt-oss-20b, the replacement Groq recommends.
 
 ## RAG setup
 
@@ -142,3 +142,4 @@ streamlit run app.py
 - Retrieval doesn't really understand dietary constraints since there's no metadata for that (see above)
 - No rate limiting on the demo so don't hammer it too hard
 - English only right now
+- - Model names are hard-coded, so when a provider retires a model (like Groq did with llama-3.1-8b-instant) the app breaks until I update it by hand
