@@ -104,7 +104,7 @@ groq_client = Groq(api_key=groq_key)
 openrouter_client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=openrouter_key)
 
 RECIPE_MODEL = "meta-llama/llama-3.1-8b-instruct"   # OpenRouter - deep reasoning & reflection
-NUTRITION_MODEL = "llama-3.1-8b-instant"            # Groq - fast, low-latency extraction
+NUTRITION_MODEL = "openai/gpt-oss-20b"            # Groq - fast, low-latency extraction
 
 
 @st.cache_resource
