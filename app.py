@@ -90,30 +90,30 @@ st.markdown("""
 .hero-copy { color: #6b7168 !important; font-size: 15px; line-height: 1.8; max-width: 480px; margin: 21px 0 26px; }
 
 /* search card (a bordered container tagged with .search-marker) */
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.search-marker) {
+.st-key-search_card {
     background: var(--paper); border: 1px solid var(--line) !important; border-radius: 18px;
     padding: 6px 10px; box-shadow: 0 12px 35px rgba(43, 56, 40, .06); max-width: 560px;
 }
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.search-marker) div[data-baseweb="input"],
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.search-marker) div[data-baseweb="base-input"],
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.search-marker) div[data-baseweb="input"] > div,
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.search-marker) [data-testid="stTextInputRootElement"],
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.search-marker) [data-testid="stTextInput"] > div {
+.st-key-search_card div[data-baseweb="input"],
+.st-key-search_card div[data-baseweb="base-input"],
+.st-key-search_card div[data-baseweb="input"] > div,
+.st-key-search_card [data-testid="stTextInputRootElement"],
+.st-key-search_card [data-testid="stTextInput"] > div {
     background: transparent !important; background-color: transparent !important; border: 0 !important; box-shadow: none !important;
 }
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.search-marker) input {
+.st-key-search_card input {
     background: transparent !important; color: var(--ink) !important; font-size: 13px;
 }
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.search-marker) button,
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.search-marker) div.stButton > button {
+.st-key-search_card button,
+.st-key-search_card div.stButton > button {
     background: var(--forest) !important; border: 0 !important; border-radius: 12px !important;
     color: #fff !important; font-weight: 700; padding: .65rem 1rem; transition: transform .2s, background .2s;
 }
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.search-marker) button:hover,
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.search-marker) div.stButton > button:hover {
+.st-key-search_card button:hover,
+.st-key-search_card div.stButton > button:hover {
     background: var(--forest-2) !important; color: #fff !important; transform: translateY(-1px);
 }
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.search-marker) button p { color: #fff !important; }
+.st-key-search_card button p { color: #fff !important; }
 .search-marker, .personalize-marker, .result-marker { display: none; }
 
 /* chips = secondary buttons, active chip = primary button */
@@ -156,6 +156,8 @@ div.stButton > button p { color: inherit; font-size: inherit; font-weight: inher
     margin-bottom: 14px;
 }
 .selected-card .eyebrow { margin: 14px 0 6px; }
+.sel-left { display: flex; align-items: center; gap: 16px; padding-top: 10px; }
+.sel-photo { width: 76px; height: 76px; border-radius: 16px; object-fit: cover; }
 .dish-title { font: 500 26px Georgia, serif; color: var(--forest); }
 .level-pill {
     background: var(--leaf); color: var(--forest); border-radius: 999px; padding: 8px 14px;
@@ -169,11 +171,11 @@ div.stButton > button p { color: inherit; font-size: inherit; font-weight: inher
     display: inline-block; font-size: 11px; font-weight: 700; color: var(--forest);
     background: var(--leaf); border-radius: 999px; padding: 6px 12px; margin-bottom: 10px;
 }
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.result-marker) {
+.st-key-result_card {
     background: var(--paper); border: 1px solid var(--line) !important; border-radius: 18px;
     padding: 10px 14px; box-shadow: 0 12px 35px rgba(43, 56, 40, .06);
 }
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.result-marker) :is(p, li, td, th, strong, h1, h2, h3, h4) {
+.st-key-result_card :is(p, li, td, th, strong, h1, h2, h3, h4) {
     color: var(--ink); line-height: 1.7;
 }
 
@@ -192,7 +194,7 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.result-marker) :is(p, li, t
 .picker-title { color: var(--forest); font-weight: 800; font-size: 14px; margin: 22px 0 8px; }
 
 /* ---- Personalize ---- */
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.personalize-marker) {
+.st-key-personalize_card {
     background: #e9efe5 !important; border: 1px solid #dce6d7 !important; border-radius: 22px; padding: 14px 20px;
     margin-top: 40px; margin-bottom: 40px;
 }
@@ -461,6 +463,7 @@ CATEGORIES = [
     {
         "name": "Rice & Curry",
         "tagline": "Everyday island comfort",
+        "photo_dish": "Lamprais",
         "img": "https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=700&q=80",
         "dishes": ["Chicken Curry", "Fish Curry", "Egg Curry", "Cashew Curry",
                    "Pol Sambol", "Seeni Sambol", "Lamprais", "Milk Rice"],
@@ -468,12 +471,14 @@ CATEGORIES = [
     {
         "name": "Street Food",
         "tagline": "Big flavor, lively spirit",
+        "photo_dish": "Kottu Roti",
         "img": "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=700&q=80",
         "dishes": ["Kottu Roti", "Hoppers", "String Hoppers", "Deviled Chicken", "Fish Cutlets"],
     },
     {
         "name": "Plant-based",
         "tagline": "Fresh, colorful and nourishing",
+        "photo_dish": "Jackfruit Curry",
         "img": "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=700&q=80",
         "dishes": ["Dhal Curry", "Beetroot Curry", "Potato Curry", "Jackfruit Curry",
                    "Pumpkin Curry", "Gotukola Mallung", "Brinjal Moju"],
@@ -481,6 +486,7 @@ CATEGORIES = [
     {
         "name": "Sweet Treats",
         "tagline": "A little sweetness to finish",
+        "photo_dish": "Watalappan",
         "img": "https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=700&q=80",
         "dishes": ["Watalappan", "Curd and Treacle"],
     },
@@ -527,16 +533,30 @@ DISH_IMAGES = {
 }
 
 
+def find_image_file(filename: str):
+    """Look for the photo in ./images, next to app.py, or in the working directory (case-insensitive)."""
+    for folder in (APP_DIR / "images", APP_DIR, Path.cwd() / "images", Path.cwd()):
+        if not folder.is_dir():
+            continue
+        candidate = folder / filename
+        if candidate.exists():
+            return candidate
+        for f in folder.iterdir():
+            if f.name.lower() == filename.lower():
+                return f
+    return None
+
+
 @st.cache_data
-def dish_image_src(dish: str, image_dir: str) -> str:
-    """Returns an <img> src for the dish: the local photo (embedded as a
-    data URI) if we have one, otherwise the generic curry photo."""
+def dish_photo_src(dish: str, fallback: str = FALLBACK_IMAGE) -> str:
+    """Returns an <img> src for the dish: its own photo (embedded as a data URI)
+    if we have one, otherwise the fallback URL."""
     filename = DISH_IMAGES.get(dish)
-    path = Path(image_dir) / filename if filename else None
-    if path and path.exists():
+    path = find_image_file(filename) if filename else None
+    if path:
         encoded = base64.b64encode(path.read_bytes()).decode()
         return f"data:image/jpeg;base64,{encoded}"
-    return FALLBACK_IMAGE
+    return fallback
 
 
 # ---------------------------------------------------------
@@ -604,6 +624,14 @@ def handle_search():
         )
 
 
+def keyed_container(key: str):
+    """Container with a CSS hook (.st-key-<key>); falls back to a plain container on old Streamlit."""
+    try:
+        return st.container(key=key)
+    except TypeError:
+        return st.container()
+
+
 # ---------------------------------------------------------
 # Header
 # ---------------------------------------------------------
@@ -640,7 +668,7 @@ with hero_left:
 <p class="hero-copy">Explore beloved local dishes, discover recipes made for your taste, and get a clearer picture of what’s on your plate — all in one place.</p>
 """, unsafe_allow_html=True)
 
-    with st.container(border=True):
+    with keyed_container("search_card"):
         st.markdown('<span class="search-marker"></span>', unsafe_allow_html=True)
         s_col1, s_col2 = st.columns([3, 1.4])
         s_col1.text_input(
@@ -670,7 +698,7 @@ with hero_left:
 with hero_right:
     st.markdown(f"""
 <div class="food-feature">
-<img src="{dish_image_src(signature_dish, str(IMAGE_DIR))}" alt="{html.escape(signature_dish)}" />
+<img src="{dish_photo_src(signature_dish)}" alt="{html.escape(signature_dish)}" />
 <div class="feature-top">✦ TODAY’S SIGNATURE DISH</div>
 <div class="feature-bottom">
 <small>A little island inspiration</small>
@@ -703,7 +731,7 @@ for col, cat in zip(cat_cols, CATEGORIES):
     with col:
         st.markdown(f"""
 <div class="category">
-<img src="{cat['img']}" alt="{html.escape(cat['name'])}" />
+<img src="{dish_photo_src(cat['photo_dish'], cat['img'])}" alt="{html.escape(cat['name'])}" />
 <div class="category-content"><strong>{html.escape(cat['name'])}</strong><span>{html.escape(cat['tagline'])}</span></div>
 </div>
 """, unsafe_allow_html=True)
@@ -732,7 +760,7 @@ level_key = "sweet_level" if is_sweet else "spice_level"
 names = SWEET_NAMES if is_sweet else SPICE_NAMES
 current_level = st.session_state.get(level_key, 3)
 
-with st.container(border=True):
+with keyed_container("personalize_card"):
     st.markdown('<span class="personalize-marker"></span><div id="personalize"></div>', unsafe_allow_html=True)
     p_left, p_right = st.columns([1.1, 1], gap="large")
     with p_left:
@@ -772,7 +800,7 @@ with result_slot:
     if dish:
         st.markdown(f"""
 <div class="selected-card">
-<div><div class="eyebrow">Selected dish</div><div class="dish-title">🍽️ {html.escape(dish)}</div></div>
+<div class="sel-left"><img class="sel-photo" src="{dish_photo_src(dish)}" alt="{html.escape(dish)}" /><div><div class="eyebrow">Selected dish</div><div class="dish-title">{html.escape(dish)}</div></div></div>
 <div class="level-pill">{names[adjustment_level]} · {adjustment_level}/5</div>
 </div>
 """, unsafe_allow_html=True)
@@ -816,7 +844,7 @@ with result_slot:
 
     res = st.session_state.last_result
     if dish and res and res["dish"] == dish and res.get("type") in ("recipe", "nutrition"):
-        with st.container(border=True):
+        with keyed_container("result_card"):
             st.markdown('<span class="result-marker"></span>', unsafe_allow_html=True)
             if res["type"] == "recipe":
                 badge = ("✅ verified by reflection_agent — corrections applied" if res["self_corrected"]
