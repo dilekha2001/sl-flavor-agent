@@ -528,11 +528,11 @@ DISH_IMAGES = {
 
 
 @st.cache_data
-def dish_image_src(dish: str) -> str:
+def dish_image_src(dish: str, image_dir: str) -> str:
     """Returns an <img> src for the dish: the local photo (embedded as a
     data URI) if we have one, otherwise the generic curry photo."""
     filename = DISH_IMAGES.get(dish)
-    path = IMAGE_DIR / filename if filename else None
+    path = Path(image_dir) / filename if filename else None
     if path and path.exists():
         encoded = base64.b64encode(path.read_bytes()).decode()
         return f"data:image/jpeg;base64,{encoded}"
@@ -670,7 +670,7 @@ with hero_left:
 with hero_right:
     st.markdown(f"""
 <div class="food-feature">
-<img src="{dish_image_src(signature_dish)}" alt="{html.escape(signature_dish)}" />
+<img src="{dish_image_src(signature_dish, str(IMAGE_DIR))}" alt="{html.escape(signature_dish)}" />
 <div class="feature-top">✦ TODAY’S SIGNATURE DISH</div>
 <div class="feature-bottom">
 <small>A little island inspiration</small>
