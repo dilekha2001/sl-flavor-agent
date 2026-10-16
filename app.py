@@ -193,7 +193,7 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.result-marker) :is(p, li, t
 
 /* ---- Personalize ---- */
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.personalize-marker) {
-    background: #e9efe5; border: 1px solid #dce6d7 !important; border-radius: 22px; padding: 14px 20px;
+    background: #e9efe5 !important; border: 1px solid #dce6d7 !important; border-radius: 22px; padding: 14px 20px;
     margin-top: 40px; margin-bottom: 40px;
 }
 .pz-title { margin: 0; color: var(--forest); font-size: 19px; font-weight: 800; letter-spacing: -.4px; }
@@ -497,7 +497,9 @@ SWEET_NAMES = {1: "Lightly sweet", 2: "Mildly sweet", 3: "Balanced", 4: "Sweet",
 # ---------------------------------------------------------
 # Dish photos (local files in ./images, next to this app.py)
 # ---------------------------------------------------------
-IMAGE_DIR = Path(__file__).parent / "images"
+APP_DIR = Path(__file__).parent
+# Use ./images if it is a real folder, otherwise look next to app.py
+IMAGE_DIR = APP_DIR / "images" if (APP_DIR / "images").is_dir() else APP_DIR
 FALLBACK_IMAGE = "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?auto=format&fit=crop&w=1200&q=85"
 DISH_IMAGES = {
     "Beetroot Curry": "beetroot-curry.jpg",
