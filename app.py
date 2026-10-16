@@ -95,20 +95,25 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.search-marker) {
     padding: 6px 10px; box-shadow: 0 12px 35px rgba(43, 56, 40, .06); max-width: 560px;
 }
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.search-marker) div[data-baseweb="input"],
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.search-marker) div[data-baseweb="base-input"] {
-    background: transparent !important; border: 0 !important;
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.search-marker) div[data-baseweb="base-input"],
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.search-marker) div[data-baseweb="input"] > div,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.search-marker) [data-testid="stTextInputRootElement"],
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.search-marker) [data-testid="stTextInput"] > div {
+    background: transparent !important; background-color: transparent !important; border: 0 !important; box-shadow: none !important;
 }
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.search-marker) input {
-    color: var(--ink) !important; font-size: 13px;
+    background: transparent !important; color: var(--ink) !important; font-size: 13px;
 }
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.search-marker) button,
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.search-marker) div.stButton > button {
-    background: var(--forest); border: 0; border-radius: 12px; color: #fff; font-weight: 700;
-    padding: .65rem 1rem; transition: transform .2s, background .2s;
+    background: var(--forest) !important; border: 0 !important; border-radius: 12px !important;
+    color: #fff !important; font-weight: 700; padding: .65rem 1rem; transition: transform .2s, background .2s;
 }
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.search-marker) button:hover,
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.search-marker) div.stButton > button:hover {
-    background: var(--forest-2); color: #fff; transform: translateY(-1px);
+    background: var(--forest-2) !important; color: #fff !important; transform: translateY(-1px);
 }
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.search-marker) div.stButton > button p { color: #fff; }
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.search-marker) button p { color: #fff !important; }
 .search-marker, .personalize-marker, .result-marker { display: none; }
 
 /* chips = secondary buttons, active chip = primary button */
